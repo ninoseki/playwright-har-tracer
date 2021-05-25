@@ -1,30 +1,8 @@
-# playwright-har-tracer
-
-A Python implementation version of Playwright's HAR tracer.
-
-## Motivation
-
-Playwright's HAR tracer is implemented to generate HAR as a file. I need to get HAR as a Python object rather than a file.
-
-- `playwright-har-tracer`'s HarTracer generates HAR as a dataclass object.
-
-## ⚠️ Limitations
-
-- Tested with Python 3.8+
-- Tested with Chromium only
-- Supports the async API only
-
-## Installation
-
-```bash
-pip install playwright-har-tracer
-```
-
-## Usage
-
-```python
 import asyncio
+
+from loguru import logger
 from playwright.async_api import async_playwright
+
 from playwright_har_tracer import HarTracer
 
 
@@ -44,8 +22,7 @@ async def main():
         await context.close()
         await browser.close()
 
-    print(har.to_json())
+    logger.info(har)
 
 
 asyncio.run(main())
-```
