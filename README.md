@@ -1,5 +1,9 @@
 # playwright-har-tracer
 
+[![PyPI version](https://badge.fury.io/py/playwright-har-tracer.svg)](https://badge.fury.io/py/playwright-har-tracer)
+[![Python CI](https://github.com/ninoseki/playwright-har-tracer/actions/workflows/test.yml/badge.svg)](https://github.com/ninoseki/playwright-har-tracer/actions/workflows/test.yml)
+[![Coverage Status](https://coveralls.io/repos/github/ninoseki/playwright-har-tracer/badge.svg?branch=main)](https://coveralls.io/github/ninoseki/playwright-har-tracer?branch=main)
+
 A Python implementation version of Playwright's HAR tracer.
 
 ## Motivation
