@@ -70,7 +70,9 @@ class Cookie:
     domain: Optional[str] = None
     expires: Optional[datetime] = field(
         default=None,
-        metadata=config(encoder=datetime_encoder),
+        metadata=config(
+            encoder=datetime_encoder,
+        ),
     )
     http_only: Optional[bool] = None
     secure: Optional[bool] = None
@@ -133,6 +135,9 @@ class Response:
     body_size: int
     redirect_url: str = field(metadata=config(field_name="redirectURL"))
     comment: Optional[str] = None
+    _remote_ip_address: Optional[str] = field(
+        default=None, metadata=config(field_name="_remoteIPAddress")
+    )
 
 
 @dataclass_json(letter_case=camelcase)
