@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "playwright-har-tracer"
-version = "0.1.0"
+version = "0.1.1"
 description = "A Python implementation version of Playwright's HAR tracer"
 authors = ["Manabu Niseki <manabu.niseki@gmail.com>"]
 homepage = "https://github.com/ninoseki/playwright-har-tracer"
