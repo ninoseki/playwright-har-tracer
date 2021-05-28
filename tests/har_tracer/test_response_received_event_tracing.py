@@ -28,3 +28,4 @@ async def test_enable_response_received_event_tracing(httpserver: HTTPServer):
 
     entry = entries[0]
     entry.response.comment == httpserver.host
+    entry.response._remote_ip_address == httpserver.host
