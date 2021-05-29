@@ -127,7 +127,7 @@ def set_remote_ip_address_as_comment(
     for entry in har.log.entries:
         url = entry.request.url
         remote_ip_address = memo.get(url)
-        entry.response.comment = remote_ip_address
+        entry.response.comment = f"remote_ip_address:{remote_ip_address}"
         entry.response._remote_ip_address = remote_ip_address
 
     return har
