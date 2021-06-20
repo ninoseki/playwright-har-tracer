@@ -69,8 +69,8 @@ class Cookie:
             encoder=datetime_encoder,
         ),
     )
-    http_only: Optional[bool] = None
-    secure: Optional[bool] = None
+    http_only: bool = False
+    secure: bool = False
     same_site: Optional[str] = None
 
 
