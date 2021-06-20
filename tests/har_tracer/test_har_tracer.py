@@ -1,5 +1,5 @@
 import base64
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, List
 
 import pytest
@@ -60,7 +60,7 @@ async def test_har_tracer(httpserver: HTTPServer, test_html: str):
     page = har.log.pages[0]
     assert page.id == "page_0"
     assert page.title == "Document"
-    assert page.started_date_time < datetime.now()
+    assert page.started_date_time < datetime.now(timezone.utc)
     assert page.page_timings.on_content_load is not None
     assert float(page.page_timings.on_content_load) > 0.0
     assert page.page_timings.on_load is not None

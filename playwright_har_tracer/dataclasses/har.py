@@ -2,16 +2,11 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import List, Optional, Union
 
-from dataclasses_json.api import dataclass_json
+from dataclasses_json.api import DataClassJsonMixin, dataclass_json
 from dataclasses_json.cfg import config
 from stringcase import camelcase
 
-
-def datetime_encoder(dt: Optional[datetime] = None) -> Optional[str]:
-    if dt is None:
-        return None
-
-    return dt.isoformat()
+from ..encoders import datetime_encoder, reject_none_encoder
 
 
 @dataclass_json(letter_case=camelcase)
@@ -74,8 +69,8 @@ class Cookie:
             encoder=datetime_encoder,
         ),
     )
-    http_only: Optional[bool] = None
-    secure: Optional[bool] = None
+    http_only: bool = False
+    secure: bool = False
     same_site: Optional[str] = None
 
 
@@ -202,7 +197,10 @@ class Log:
     comment: Optional[str] = None
 
 
-@dataclass_json(letter_case=camelcase)
 @dataclass
-class Har:
-    log: Log
+class Har(DataClassJsonMixin):
+    log: Log = field(
+        metadata=config(
+            encoder=reject_none_encoder,
+        ),
+    )
