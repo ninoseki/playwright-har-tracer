@@ -1,7 +1,7 @@
 import asyncio
 import base64
 import copy
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, List, Union
 from urllib.parse import urlparse
 
@@ -73,7 +73,7 @@ class HarTracer:
 
         har_entry = dataclasses.har.Entry(
             pageref=page_entry.id,
-            started_date_time=datetime.now(),
+            started_date_time=datetime.now(timezone.utc),
             time=-1,
             request=dataclasses.har.Request(
                 method=request.method,
@@ -212,7 +212,7 @@ class HarTracer:
 
     def on_page(self, page: Page) -> None:
         page_entry = dataclasses.har.Page(
-            started_date_time=datetime.now(),
+            started_date_time=datetime.now(timezone.utc),
             id=f"page_{self._last_page}",
             title="",
             page_timings=dataclasses.har.PageTimings(on_content_load=-1, on_load=-1),
