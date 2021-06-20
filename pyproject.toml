@@ -9,6 +9,7 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.8"
+boltons = "^21.0.0"
 dataclasses-json = "^0.5.3"
 poetry-version = "^0.1.5"
 python-dateutil = "^2.8.1"
