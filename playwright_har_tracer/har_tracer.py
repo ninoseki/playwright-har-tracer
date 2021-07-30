@@ -111,7 +111,7 @@ class HarTracer:
         self._log.entries.append(har_entry)
         self._entries[request] = har_entry
 
-    async def on_response(self, page: Page, response: Response) -> None:
+    def on_response(self, page: Page, response: Response) -> None:
         page_entry = self._page_entries.get(page)
         if page_entry is None:
             return
@@ -199,22 +199,30 @@ class HarTracer:
         har_entry.time = sum([dns, connect, ssl, wait, receive])
 
         # set server IP address and port
-        server = cast(
-            Optional[Dict[str, Union[str, int]]], await response.server_addr()
-        )
-        if server is not None:
-            har_entry.server_ip_address = cast(Optional[str], server.get("ipAddress"))
-            har_entry._server_port = cast(Optional[int], server.get("port"))
+        async def set_server_ip_and_port():
+            server = cast(
+                Optional[Dict[str, Union[str, int]]], await response.server_addr()
+            )
+            if server is not None:
+                har_entry.server_ip_address = cast(
+                    Optional[str], server.get("ipAddress")
+                )
+                har_entry._server_port = cast(Optional[int], server.get("port"))
+
+        self._tasks.append(self._loop.create_task(set_server_ip_and_port()))
 
         # set security details
-        security_details = cast(
-            Optional[Dict[str, Union[str, int, float]]],
-            await response.security_details(),
-        )
-        if security_details is not None:
-            har_entry._security_details = dataclasses.har.SecurityDetails.from_dict(
-                security_details
+        async def set_security_details():
+            security_details = cast(
+                Optional[Dict[str, Union[str, int, float]]],
+                await response.security_details(),
             )
+            if security_details is not None:
+                har_entry._security_details = dataclasses.har.SecurityDetails.from_dict(
+                    security_details
+                )
+
+        self._tasks.append(self._loop.create_task(set_security_details()))
 
         if self._omit_content is False and response.status == 200:
 
