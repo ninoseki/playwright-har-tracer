@@ -110,25 +110,3 @@ def post_data_for_har(request: Request) -> Optional[dataclasses.har.PostData]:
         result.params.extend(form_data_to_params(form_data))
 
     return result
-
-
-def set_remote_ip_address_as_comment(
-    har: dataclasses.har.Har,
-    response_received_events: List[dataclasses.cdp.ResponseReceivedEvent],
-):
-    # url -> remote_ip_address table
-    memo: Dict[str, Optional[str]] = {}
-    for event in response_received_events:
-        key = event.response.url
-        value = event.response.remote_ip_address
-        memo[key] = value
-
-    # set a remote IP address as a comment
-    for entry in har.log.entries:
-        url = entry.request.url
-        remote_ip_address = memo.get(url)
-        if remote_ip_address is not None:
-            entry.response.comment = f"remote_ip_address:{remote_ip_address}"
-            entry.response._remote_ip_address = remote_ip_address
-
-    return har

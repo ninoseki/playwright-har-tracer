@@ -130,9 +130,6 @@ class Response:
     body_size: int
     redirect_url: str = field(metadata=config(field_name="redirectURL"))
     comment: Optional[str] = None
-    _remote_ip_address: Optional[str] = field(
-        default=None, metadata=config(field_name="_remoteIPAddress")
-    )
 
 
 @dataclass_json(letter_case=camelcase)
@@ -146,6 +143,16 @@ class Timings:
     connect: Optional[Union[int, float]] = None
     ssl: Optional[Union[int, float]] = None
     comment: Optional[Union[int, float]] = None
+
+
+@dataclass_json(letter_case=camelcase)
+@dataclass
+class SecurityDetails:
+    protocol: Optional[str] = None
+    subject_name: Optional[str] = None
+    issuer: Optional[str] = None
+    valid_from: Optional[int] = None
+    valid_to: Optional[int] = None
 
 
 @dataclass_json(letter_case=camelcase)
@@ -166,6 +173,13 @@ class Entry:
         default=None, metadata=config(field_name="serverIPAddress")
     )
     comment: Optional[str] = None
+
+    _server_port: Optional[int] = field(
+        default=None, metadata=config(field_name="_serverPort")
+    )
+    _security_details: Optional[SecurityDetails] = field(
+        default=None, metadata=config(field_name="_securityDetails")
+    )
 
 
 @dataclass_json(letter_case=camelcase)

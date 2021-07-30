@@ -2,7 +2,7 @@ import asyncio
 import base64
 import copy
 from datetime import datetime, timezone
-from typing import Dict, List, Union
+from typing import Dict, List, Optional, Union, cast
 from urllib.parse import urlparse
 
 import poetry_version
@@ -16,7 +16,6 @@ from .utils import (
     millis_to_roundish_millis,
     post_data_for_har,
     query_to_query_params,
-    set_remote_ip_address_as_comment,
 )
 
 __version__ = poetry_version.extract(source_file=__file__)
@@ -114,7 +113,7 @@ class HarTracer:
         self._log.entries.append(har_entry)
         self._entries[request] = har_entry
 
-    def on_response(self, page: Page, response: Response) -> None:
+    async def on_response(self, page: Page, response: Response) -> None:
         page_entry = self._page_entries.get(page)
         if page_entry is None:
             return
@@ -200,6 +199,24 @@ class HarTracer:
             receive=receive,
         )
         har_entry.time = sum([dns, connect, ssl, wait, receive])
+
+        # set server IP address and port
+        server = cast(
+            Optional[Dict[str, Union[str, int]]], await response.server_addr()
+        )
+        if server is not None:
+            har_entry.server_ip_address = cast(Optional[str], server.get("ipAddress"))
+            har_entry._server_port = cast(Optional[int], server.get("port"))
+
+        # set security details
+        security_details = cast(
+            Optional[Dict[str, Union[str, int, float]]],
+            await response.security_details(),
+        )
+        if security_details is not None:
+            har_entry._security_details = dataclasses.har.SecurityDetails.from_dict(
+                security_details
+            )
 
         if self._omit_content is False and response.status == 200:
 
@@ -301,5 +318,4 @@ class HarTracer:
 
         log = copy.deepcopy(self._log)
         har = dataclasses.har.Har(log=log)
-        har = set_remote_ip_address_as_comment(har, self._response_received_events)
         return har
