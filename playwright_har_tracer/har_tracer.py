@@ -6,7 +6,7 @@ from typing import Dict, List, Optional, Union, cast
 from urllib.parse import urlparse
 
 import poetry_version
-from playwright.async_api import BrowserContext, CDPSession, Page, Request, Response
+from playwright.async_api import BrowserContext, Page, Request, Response
 
 from . import dataclasses
 from .utils import (
@@ -58,8 +58,6 @@ class HarTracer:
             pages=[],
             entries=[],
         )
-
-        self._response_received_events: List[dataclasses.cdp.ResponseReceivedEvent] = []
 
         context.on("page", self.on_page)
 
@@ -286,15 +284,6 @@ class HarTracer:
 
         page.on("domcontentloaded", lambda: on_dom_content_loaded(page))
         page.on("load", lambda: on_load(page))
-
-    async def enable_response_received_event_tracing(self, client: CDPSession):
-        await client.send("Network.enable")
-        client.on(
-            "Network.responseReceived",
-            lambda data: self._response_received_events.append(
-                dataclasses.cdp.ResponseReceivedEvent.from_dict(data)
-            ),
-        )
 
     async def flush(self) -> dataclasses.har.Har:
         await asyncio.gather(*self._tasks)
