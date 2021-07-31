@@ -29,13 +29,19 @@ async def test_post_data(httpserver: HTTPServer):
     entries = har.log.entries
     assert len(entries) == 2
 
-    # assert post data
     entry = entries[1]
+
+    # assert body size
+    assert entry.request.body_size > 0
+
+    # assert post data
     post_data = entry.request.post_data
     assert post_data is not None
     assert post_data.mime_type == "text/plain;charset=UTF-8"
     assert post_data.params == []
     assert post_data.text == "Hello"
+
+    assert entry.request.body_size > 0
 
 
 async def generate_har_with_post_params(httpserver: HTTPServer) -> dataclasses.har.Har:
@@ -65,6 +71,11 @@ async def test_post_data_with_params(httpserver: HTTPServer):
 
     entries = har.log.entries
     entry = entries[1]
+
+    # assert body size
+    assert entry.request.body_size > 0
+
+    # assert post data
     post_data = entry.request.post_data
     assert post_data is not None
     assert post_data.mime_type == "application/x-www-form-urlencoded"

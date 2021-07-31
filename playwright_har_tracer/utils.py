@@ -1,12 +1,13 @@
 import re
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional
-from urllib.parse import parse_qs
+from urllib.parse import parse_qs, urlparse
 
 import dateutil.parser
 from playwright.async_api import Request
 
 from . import dataclasses
+from .constants import FALLBACK_HTTP_VERSION
 
 
 def millis_to_roundish_millis(value: float) -> int:
@@ -110,3 +111,42 @@ def post_data_for_har(request: Request) -> Optional[dataclasses.har.PostData]:
         result.params.extend(form_data_to_params(form_data))
 
     return result
+
+
+def calculate_response_headers_size(
+    protocol: str, status: int, status_text: str, headers: Dict[str, str]
+) -> int:
+    raw_headers = f"{protocol} {status} {status_text}\r\n"
+    for key, value in headers.items():
+        raw_headers += f"{key}: {value}\r\n"
+    raw_headers += "\r\n"
+    return len(raw_headers)
+
+
+def calculate_request_headers_size(
+    method: str, url: str, http_version: str, headers: Dict[str, str]
+) -> int:
+    parsed = urlparse(url)
+    raw_headers = f"{method} {parsed.path} {http_version}\r\n"
+    for key, value in headers.items():
+        raw_headers += f"{key}: {value}\r\n"
+
+    return len(raw_headers)
+
+
+def normalize_http_version(http_version: Optional[str] = None) -> str:
+    if http_version is None:
+        return FALLBACK_HTTP_VERSION
+
+    if http_version == "http/1.1":
+        return "HTTP/1.1"
+
+    return http_version
+
+
+def calculate_request_body_size(request: Request) -> Optional[int]:
+    post_data = request.post_data_buffer
+    if post_data is None:
+        return None
+
+    return len(post_data.decode("utf8"))
