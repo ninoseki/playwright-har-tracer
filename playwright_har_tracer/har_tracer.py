@@ -2,11 +2,11 @@ import asyncio
 import base64
 import copy
 from datetime import datetime, timezone
-from typing import Dict, List, Union
+from typing import Dict, List, Optional, Union, cast
 from urllib.parse import urlparse
 
 import poetry_version
-from playwright.async_api import BrowserContext, CDPSession, Page, Request, Response
+from playwright.async_api import BrowserContext, Page, Request, Response
 
 from . import dataclasses
 from .utils import (
@@ -16,7 +16,6 @@ from .utils import (
     millis_to_roundish_millis,
     post_data_for_har,
     query_to_query_params,
-    set_remote_ip_address_as_comment,
 )
 
 __version__ = poetry_version.extract(source_file=__file__)
@@ -59,8 +58,6 @@ class HarTracer:
             pages=[],
             entries=[],
         )
-
-        self._response_received_events: List[dataclasses.cdp.ResponseReceivedEvent] = []
 
         context.on("page", self.on_page)
 
@@ -201,6 +198,32 @@ class HarTracer:
         )
         har_entry.time = sum([dns, connect, ssl, wait, receive])
 
+        # set server IP address and port
+        async def set_server_ip_and_port():
+            server = cast(
+                Optional[Dict[str, Union[str, int]]], await response.server_addr()
+            )
+            if server is not None:
+                har_entry.server_ip_address = cast(
+                    Optional[str], server.get("ipAddress")
+                )
+                har_entry._server_port = cast(Optional[int], server.get("port"))
+
+        self._tasks.append(self._loop.create_task(set_server_ip_and_port()))
+
+        # set security details
+        async def set_security_details():
+            security_details = cast(
+                Optional[Dict[str, Union[str, int, float]]],
+                await response.security_details(),
+            )
+            if security_details is not None:
+                har_entry._security_details = dataclasses.har.SecurityDetails.from_dict(
+                    security_details
+                )
+
+        self._tasks.append(self._loop.create_task(set_security_details()))
+
         if self._omit_content is False and response.status == 200:
 
             async def on_response_task():
@@ -270,15 +293,6 @@ class HarTracer:
         page.on("domcontentloaded", lambda: on_dom_content_loaded(page))
         page.on("load", lambda: on_load(page))
 
-    async def enable_response_received_event_tracing(self, client: CDPSession):
-        await client.send("Network.enable")
-        client.on(
-            "Network.responseReceived",
-            lambda data: self._response_received_events.append(
-                dataclasses.cdp.ResponseReceivedEvent.from_dict(data)
-            ),
-        )
-
     async def flush(self) -> dataclasses.har.Har:
         await asyncio.gather(*self._tasks)
 
@@ -301,5 +315,4 @@ class HarTracer:
 
         log = copy.deepcopy(self._log)
         har = dataclasses.har.Har(log=log)
-        har = set_remote_ip_address_as_comment(har, self._response_received_events)
         return har

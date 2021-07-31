@@ -31,14 +31,3 @@ class Response:
     timing: Optional[Dict[str, float]] = None
     protocol: Optional[str] = None
     headers_text: Optional[str] = None
-
-
-@dataclass_json(letter_case=camelcase)
-@dataclass
-class ResponseReceivedEvent:
-    request_id: str
-    loader_id: str
-    timestamp: float
-    type: str
-    response: Response
-    frame_id: str

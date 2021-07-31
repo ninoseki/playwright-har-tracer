@@ -91,3 +91,10 @@ async def test_har_tracer(httpserver: HTTPServer, test_html: str):
     assert entry.response.content.mime_type == "text/html"
     assert entry.response.content.text is not None
     assert base64.b64decode(entry.response.content.text).decode() == test_html
+
+    # assert server IP address and port
+    assert entry.server_ip_address == "127.0.0.1"
+    assert entry._server_port == httpserver.port
+
+    # assert security details
+    assert entry._security_details is None
