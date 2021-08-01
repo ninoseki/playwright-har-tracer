@@ -5,6 +5,7 @@
 [![Coverage Status](https://coveralls.io/repos/github/ninoseki/playwright-har-tracer/badge.svg?branch=main)](https://coveralls.io/github/ninoseki/playwright-har-tracer?branch=main)
 
 A Python implementation version of Playwright's HAR tracer.
+It is equivalent to playwright `v0.13.x`’s HAR tracer implementation.
 
 ## Motivation
 
