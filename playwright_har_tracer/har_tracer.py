@@ -5,11 +5,14 @@ from datetime import datetime, timezone
 from typing import Dict, List, Optional, Union, cast
 from urllib.parse import urlparse
 
-import poetry_version
 from playwright.async_api import BrowserContext, Page, Request, Response
 
 from . import dataclasses
+from .constants import CREATOR_NAME, CREATOR_VERSION, FALLBACK_HTTP_VERSION, HAR_VERSION
 from .utils import (
+    calculate_request_body_size,
+    calculate_request_headers_size,
+    calculate_response_headers_size,
     cookies_for_har,
     datetime_to_millis,
     dict_to_headers,
@@ -17,13 +20,6 @@ from .utils import (
     post_data_for_har,
     query_to_query_params,
 )
-
-__version__ = poetry_version.extract(source_file=__file__)
-
-
-HAR_VERSION: str = "1.2"
-CREATOR_NAME: str = "playwright-har-tracer"
-CREATOR_VERSION: str = __version__
 
 
 class HarTracer:
@@ -75,28 +71,28 @@ class HarTracer:
             request=dataclasses.har.Request(
                 method=request.method,
                 url=request.url,
-                http_version="HTTP/1.1",
+                http_version=FALLBACK_HTTP_VERSION,
                 cookies=[],
                 headers=[],
                 query_string=query_to_query_params(parsed_url.query),
-                post_data=None,
+                post_data=post_data_for_har(request),
                 headers_size=-1,
-                body_size=-1,
+                body_size=calculate_request_body_size(request) or 0,
             ),
             response=dataclasses.har.Response(
                 status=-1,
                 status_text="",
-                http_version="HTTP/1.1",
+                http_version=FALLBACK_HTTP_VERSION,
                 cookies=[],
                 headers=[],
                 content=dataclasses.har.Content(
                     size=-1,
-                    mime_type=request.headers.get("content-type")
-                    or "application/octet-stream",
+                    mime_type=request.headers.get("content-type") or "x-unknown",
                 ),
                 headers_size=-1,
                 body_size=-1,
                 redirect_url="",
+                _transfer_size=-1,
             ),
             cache=dataclasses.har.Cache(before_request=None, after_request=None),
             timings=dataclasses.har.Timings(send=-1, wait=-1, receive=-1),
@@ -129,18 +125,17 @@ class HarTracer:
         har_entry.response = dataclasses.har.Response(
             status=response.status,
             status_text=response.status_text,
-            http_version="HTTP/1.1",
+            http_version=FALLBACK_HTTP_VERSION,
             cookies=cookies_for_har(response.headers.get("set-cookie"), "\n"),
             headers=dict_to_headers(response.headers),
             content=dataclasses.har.Content(
                 size=-1,
-                mime_type=response.headers.get(
-                    "content-type", "application/octet-stream"
-                ),
+                mime_type=response.headers.get("content-type", "x-unknown"),
             ),
             headers_size=-1,
             body_size=-1,
             redirect_url="",
+            _transfer_size=-1,
         )
 
         timing = response.request.timing
@@ -233,6 +228,34 @@ class HarTracer:
 
             self._tasks.append(self._loop.create_task(on_response_task()))
 
+    def on_request_finished(self, page: Page, request: Request):
+        har_entry = self._entries.get(request)
+        if har_entry is None:
+            return
+
+        async def handle_finished_request():
+            response = await request.response()
+            if response is None:
+                return
+
+            # TODO
+            http_version = FALLBACK_HTTP_VERSION
+            transfer_size = -1
+            headers_size = calculate_response_headers_size(
+                http_version, response.status, response.status_text, response.headers
+            )
+            body_size = -1
+
+            har_entry.request.http_version = http_version
+            har_entry.response.body_size = body_size
+            har_entry.response.headers_size = headers_size
+            har_entry.response._transfer_size = transfer_size
+            har_entry.request.headers_size = calculate_request_headers_size(
+                request.method, request.url, http_version, request.headers
+            )
+
+        self._tasks.append(self._loop.create_task(handle_finished_request()))
+
     def on_page(self, page: Page) -> None:
         page_entry = dataclasses.har.Page(
             started_date_time=datetime.now(timezone.utc),
@@ -246,6 +269,9 @@ class HarTracer:
         self._log.pages.append(page_entry)
 
         page.on("request", lambda request: self.on_request(page, request))
+        page.on(
+            "requestfinished", lambda request: self.on_request_finished(page, request)
+        )
         page.on("response", lambda response: self.on_response(page, response))
 
         def on_dom_content_loaded(page: Page) -> None:

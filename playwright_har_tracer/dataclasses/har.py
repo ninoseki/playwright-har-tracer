@@ -131,6 +131,10 @@ class Response:
     redirect_url: str = field(metadata=config(field_name="redirectURL"))
     comment: Optional[str] = None
 
+    _transfer_size: Optional[int] = field(
+        default=None, metadata=config(field_name="_transferSize")
+    )
+
 
 @dataclass_json(letter_case=camelcase)
 @dataclass

@@ -77,6 +77,7 @@ async def test_har_tracer(httpserver: HTTPServer, test_html: str):
     assert entry.request.http_version == "HTTP/1.1"
     headers = headers_to_dict(entry.request.headers)
     assert "user-agent" in headers
+    assert entry.request.body_size == 0
 
     # assert response
     assert entry.response.status == status

@@ -1,11 +1,15 @@
 from datetime import datetime, timezone
+from typing import Optional
 
 import pytest
 
 from playwright_har_tracer import dataclasses
 from playwright_har_tracer.utils import (
+    calculate_request_headers_size,
+    calculate_response_headers_size,
     datetime_to_millis,
     millis_to_roundish_millis,
+    normalize_http_version,
     parse_cookie,
     query_to_query_params,
 )
@@ -61,3 +65,51 @@ def test_parse_cookie_with_secure():
 def test_parse_cookie_with_path():
     cookie = parse_cookie("id=a3fWa; Path=/foo")
     assert cookie.path == "/foo"
+
+
+@pytest.mark.parametrize(
+    "input,expected", [(None, "HTTP/1.1"), ("http/1.1", "HTTP/1.1")]
+)
+def test_normalize_http_version(input: Optional[str], expected: str):
+    assert normalize_http_version(input) == expected
+
+
+def test_calculate_request_headers_size():
+    size = calculate_request_headers_size(
+        "GET",
+        "/",
+        "HTTP/1.1",
+        {
+            "Host": "example.com",
+            "Connection": "keep-alive",
+            "Upgrade-Insecure-Requests": "1",
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/93.0.4576.0 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9",
+            "Accept-Encoding": "gzip, deflate",
+        },
+    )
+    assert size == 407
+
+
+def test_calculate_response_headers_size():
+    size = calculate_response_headers_size(
+        "HTTP/1.1",
+        200,
+        "OK",
+        {
+            "Content-Encoding": "gzip",
+            "Accept-Ranges": "bytes",
+            "Age": "410497",
+            "Cache-Control": "max-age=604800",
+            "Content-Type": "text/html; charset=UTF-8",
+            "Date": "Sat, 31 Jul 2021 10:03:11 GMT",
+            "Etag": '"3147526947+ident"',
+            "Expires": "Sat, 07 Aug 2021 10:03:11 GMT",
+            "Last-Modified": "Thu, 17 Oct 2019 07:18:26 GMT",
+            "Server": "ECS (sec/9794)",
+            "Vary": "Accept-Encoding",
+            "X-Cache": "HIT",
+            "Content-Length": "648",
+        },
+    )
+    assert size == 380
