@@ -49,59 +49,26 @@ async def test_cookie(httpserver: HTTPServer):
 
 
 async def generate_har_with_unusual_cookies(
-    httpserver: HTTPServer,
+    httpserver: HTTPServer, cookie_value: str
 ) -> dataclasses.har.Har:
+    set_cookie = f"cookie_name={cookie_value}"
     httpserver.expect_oneshot_request("/foo", method="GET").respond_with_data(
-        response_data=""
+        response_data="", headers={"set-cookie": set_cookie}
     )
 
     async with page_with_har_tracer() as (page, tracer):
-        await page.context.add_cookies(
-            [
-                {
-                    "name": "name1",
-                    "value": '"value1"',
-                    "domain": httpserver.host,
-                    "path": "/",
-                },
-                {
-                    "name": "name2",
-                    "value": 'val"ue2',
-                    "domain": httpserver.host,
-                    "path": "/",
-                },
-                {
-                    "name": "name3",
-                    "value": "val=ue3",
-                    "domain": httpserver.host,
-                    "path": "/",
-                },
-                {
-                    "name": "name4",
-                    "value": "val,ue4",
-                    "domain": "localhost",
-                    "path": "/",
-                },
-            ]
-        )
-
         await page.goto(httpserver.url_for("/foo"))
-
         har = await tracer.flush()
         return har
 
 
 @pytest.mark.asyncio
-async def test_unusual_cookies(httpserver: HTTPServer):
-    har = await generate_har_with_unusual_cookies(httpserver)
+@pytest.mark.parametrize("value", ['"value1"', 'val"ue2', "val=ue3", "val,ue4"])
+async def test_unusual_cookies(httpserver: HTTPServer, value: str):
+    har = await generate_har_with_unusual_cookies(httpserver, value)
 
-    # assert entries
     entries = har.log.entries
-
     entry = entries[0]
-    cookies = entry.request.cookies
-    assert len(cookies) == 4
-    assert cookies[0].value == '"value1"'
-    assert cookies[1].value == 'val"ue2'
-    assert cookies[2].value == "val=ue3"
-    assert cookies[3].value == "val,ue4"
+    cookies = entry.response.cookies
+    assert len(cookies) == 1
+    assert cookies[0].value == value
