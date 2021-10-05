@@ -36,7 +36,7 @@ class HarTracer:
         self._omit_content = omit_content
 
         self._page_entries: Dict[Page, dataclasses.har.Page] = {}
-        self._entries: Dict[Request, dataclasses.har.Entry] = {}
+        self._entries: Dict[int, dataclasses.har.Entry] = {}
         self._last_page: int = 0
 
         self._loop = asyncio.get_event_loop()
@@ -87,7 +87,7 @@ class HarTracer:
                 headers=[],
                 content=dataclasses.har.Content(
                     size=-1,
-                    mime_type=request.headers.get("content-type") or "x-unknown",
+                    mime_type="x-unknown",
                 ),
                 headers_size=-1,
                 body_size=-1,
@@ -98,45 +98,72 @@ class HarTracer:
             timings=dataclasses.har.Timings(send=-1, wait=-1, receive=-1),
         )
 
+        async def update_mime_type_task():
+            har_entry.response.content.mime_type = (
+                await request.header_value("content-type")
+                or har_entry.response.content.mime_type
+            )
+
+        self._tasks.append(self._loop.create_task(update_mime_type_task()))
+
         redirected_from_request = request.redirected_from
         if redirected_from_request is not None:
-            from_entry = self._entries.get(redirected_from_request)
+            from_entry = self._entries.get(redirected_from_request.__hash__())
             if from_entry is not None:
                 from_entry.response.redirect_url = request.url
 
         self._log.entries.append(har_entry)
-        self._entries[request] = har_entry
+        self._entries[request.__hash__()] = har_entry
 
-    def on_response(self, page: Page, response: Response) -> None:
+    async def on_response(self, page: Page, response: Response) -> None:
         page_entry = self._page_entries.get(page)
         if page_entry is None:
             return
 
         request = response.request
-        har_entry = self._entries.get(request)
+        har_entry = self._entries.get(request.__hash__())
         if har_entry is None:
             return
-
-        # Rewrite provisional headers with actual
-        har_entry.request.headers = dict_to_headers(request.headers)
-        har_entry.request.cookies = cookies_for_har(request.headers.get("cookie"), ";")
-        har_entry.request.post_data = post_data_for_har(request)
 
         har_entry.response = dataclasses.har.Response(
             status=response.status,
             status_text=response.status_text,
             http_version=FALLBACK_HTTP_VERSION,
-            cookies=cookies_for_har(response.headers.get("set-cookie"), "\n"),
-            headers=dict_to_headers(response.headers),
+            cookies=[],
+            headers=[],
             content=dataclasses.har.Content(
                 size=-1,
-                mime_type=response.headers.get("content-type", "x-unknown"),
+                mime_type="x-unknown",
             ),
             headers_size=-1,
             body_size=-1,
             redirect_url="",
             _transfer_size=-1,
         )
+
+        async def rewrite_headers_task():
+            request_headers = await request.all_headers()
+            response_headers = await response.all_headers()
+            # Rewrite provisional headers with actual
+            har_entry.request.headers = dict_to_headers(request_headers)
+            har_entry.request.cookies = cookies_for_har(
+                request_headers.get("cookie"), ";"
+            )
+            har_entry.request.post_data = post_data_for_har(request)
+
+            har_entry.response.status = response.status
+            har_entry.response.status_text = response.status_text
+            har_entry.response.cookies = cookies_for_har(
+                response_headers.get("set-cookie"), "\n"
+            )
+            har_entry.response.headers = dict_to_headers(response_headers)
+
+            har_entry.response.content.mime_type = (
+                response_headers.get("content-type")
+                or har_entry.response.content.mime_type
+            )
+
+        self._tasks.append(self._loop.create_task(rewrite_headers_task()))
 
         timing = response.request.timing
         start_time = timing.get("startTime", 0.0)
@@ -229,7 +256,7 @@ class HarTracer:
             self._tasks.append(self._loop.create_task(on_response_task()))
 
     def on_request_finished(self, page: Page, request: Request):
-        har_entry = self._entries.get(request)
+        har_entry = self._entries.get(request.__hash__())
         if har_entry is None:
             return
 
@@ -238,11 +265,13 @@ class HarTracer:
             if response is None:
                 return
 
+            response_headers = await response.all_headers()
+            request_headers = await request.all_headers()
             # TODO
             http_version = FALLBACK_HTTP_VERSION
             transfer_size = -1
             headers_size = calculate_response_headers_size(
-                http_version, response.status, response.status_text, response.headers
+                http_version, response.status, response.status_text, response_headers
             )
             body_size = -1
 
@@ -251,7 +280,7 @@ class HarTracer:
             har_entry.response.headers_size = headers_size
             har_entry.response._transfer_size = transfer_size
             har_entry.request.headers_size = calculate_request_headers_size(
-                request.method, request.url, http_version, request.headers
+                request.method, request.url, http_version, request_headers
             )
 
         self._tasks.append(self._loop.create_task(handle_finished_request()))
