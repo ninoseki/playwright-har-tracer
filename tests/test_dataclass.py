@@ -21,3 +21,13 @@ with open(path) as f:
 def test_har_from_dict():
     har = Har.from_dict(fixture)
     assert har
+
+
+def test_har_to_dict():
+    har = Har.from_dict(fixture)
+    assert isinstance(har.to_dict(), dict)
+
+
+def test_har_to_json():
+    har = Har.from_dict(fixture)
+    assert isinstance(har.to_json(), str)
