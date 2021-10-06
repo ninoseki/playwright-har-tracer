@@ -1,6 +1,4 @@
-import poetry_version
-
-__version__ = poetry_version.extract(source_file=__file__)
+__version__ = "0.3.1"
 
 
 HAR_VERSION: str = "1.2"
