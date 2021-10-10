@@ -30,4 +30,9 @@ def test_har_to_dict():
 
 def test_har_to_json():
     har = Har.from_dict(fixture)
-    assert isinstance(har.to_json(), str)
+    json_str = har.to_json()
+    assert isinstance(json_str, str)
+
+    # also it should be converted as a dataclass
+    har = Har.from_dict(json.loads(json_str, object_hook=datetime_decoder))
+    assert isinstance(har, Har)
