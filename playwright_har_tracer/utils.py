@@ -103,11 +103,15 @@ def post_data_for_har(request: Request) -> Optional[dataclasses.har.PostData]:
         return None
 
     content_type = request.headers.get("content-type", "application/octet-stream")
-    text = "" if content_type == "application/octet-stream" else post_data.decode()
+    text = (
+        ""
+        if content_type == "application/octet-stream"
+        else post_data.decode("utf8", "replace")
+    )
     result = dataclasses.har.PostData(mime_type=content_type, text=text, params=[])
 
     if content_type == "application/x-www-form-urlencoded":
-        form_data = post_data.decode()
+        form_data = post_data.decode("utf8", "replace")
         result.params.extend(form_data_to_params(form_data))
 
     return result
@@ -149,4 +153,4 @@ def calculate_request_body_size(request: Request) -> Optional[int]:
     if post_data is None:
         return None
 
-    return len(post_data.decode("utf8"))
+    return len(post_data.decode("utf8", "replace"))

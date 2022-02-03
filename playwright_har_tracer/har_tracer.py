@@ -250,7 +250,9 @@ class HarTracer:
 
             async def on_response_task():
                 body = await response.body()
-                har_entry.response.content.text = base64.b64encode(body).decode()
+                har_entry.response.content.text = base64.b64encode(body).decode(
+                    "utf8", "replace"
+                )
                 har_entry.response.content.encoding = "base64"
 
             self._tasks.append(self._loop.create_task(on_response_task()))
