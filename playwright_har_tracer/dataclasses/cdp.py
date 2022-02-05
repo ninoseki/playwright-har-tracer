@@ -1,14 +1,13 @@
 from dataclasses import dataclass, field
 from typing import Any, Dict, Optional
 
-from dataclasses_json.api import dataclass_json
 from dataclasses_json.cfg import config
-from stringcase import camelcase
+
+from .mixin import CustomizedDataClassJsonMixin
 
 
-@dataclass_json(letter_case=camelcase)
 @dataclass
-class Response:
+class Response(CustomizedDataClassJsonMixin):
     url: str
     status: int
     status_text: str
