@@ -2,63 +2,55 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import List, Optional, Union
 
-from dataclasses_json.api import DataClassJsonMixin, dataclass_json
 from dataclasses_json.cfg import config
-from stringcase import camelcase
 
-from ..encoders import datetime_encoder, reject_none_encoder
+from ..encoders import datetime_encoder
+from .mixin import CustomizedDataClassJsonMixin
 
 
-@dataclass_json(letter_case=camelcase)
 @dataclass
-class Browser:
+class Browser(CustomizedDataClassJsonMixin):
     name: str
     version: str
     comment: Optional[str] = None
 
 
-@dataclass_json(letter_case=camelcase)
 @dataclass
-class Creator:
+class Creator(CustomizedDataClassJsonMixin):
     name: str
     version: str
     comment: Optional[str] = None
 
 
-@dataclass_json(letter_case=camelcase)
 @dataclass
-class CacheState:
+class CacheState(CustomizedDataClassJsonMixin):
     last_access: str
     e_tag: str
     hit_count: int
     expires: Optional[str] = None
 
 
-@dataclass_json(letter_case=camelcase)
 @dataclass
-class Cache:
+class Cache(CustomizedDataClassJsonMixin):
     before_request: Optional[CacheState] = None
     after_request: Optional[CacheState] = None
     comment: Optional[str] = None
 
 
-@dataclass_json(letter_case=camelcase)
 @dataclass
-class QueryParameter:
+class QueryParameter(CustomizedDataClassJsonMixin):
     name: str
     value: str
 
 
-@dataclass_json(letter_case=camelcase)
 @dataclass
-class Header:
+class Header(CustomizedDataClassJsonMixin):
     name: str
     value: str
 
 
-@dataclass_json(letter_case=camelcase)
 @dataclass
-class Cookie:
+class Cookie(CustomizedDataClassJsonMixin):
     name: str
     value: str
     path: Optional[str] = None
@@ -74,26 +66,23 @@ class Cookie:
     same_site: Optional[str] = None
 
 
-@dataclass_json(letter_case=camelcase)
 @dataclass
-class Param:
+class Param(CustomizedDataClassJsonMixin):
     name: str
     value: Optional[str] = None
     file_name: Optional[str] = None
     content_type: Optional[str] = None
 
 
-@dataclass_json(letter_case=camelcase)
 @dataclass
-class PostData:
+class PostData(CustomizedDataClassJsonMixin):
     mime_type: str
     params: List[Param]
     text: str
 
 
-@dataclass_json(letter_case=camelcase)
 @dataclass
-class Request:
+class Request(CustomizedDataClassJsonMixin):
     method: str
     url: str
     http_version: str
@@ -106,9 +95,8 @@ class Request:
     comment: Optional[str] = None
 
 
-@dataclass_json(letter_case=camelcase)
 @dataclass
-class Content:
+class Content(CustomizedDataClassJsonMixin):
     size: int
     compression: Optional[int] = None
     mime_type: Optional[str] = None
@@ -117,9 +105,8 @@ class Content:
     comment: Optional[str] = None
 
 
-@dataclass_json(letter_case=camelcase)
 @dataclass
-class Response:
+class Response(CustomizedDataClassJsonMixin):
     status: int
     status_text: str
     http_version: str
@@ -136,9 +123,8 @@ class Response:
     )
 
 
-@dataclass_json(letter_case=camelcase)
 @dataclass
-class Timings:
+class Timings(CustomizedDataClassJsonMixin):
     send: Union[int, float]
     wait: Union[int, float]
     receive: Union[int, float]
@@ -149,9 +135,8 @@ class Timings:
     comment: Optional[Union[int, float]] = None
 
 
-@dataclass_json(letter_case=camelcase)
 @dataclass
-class SecurityDetails:
+class SecurityDetails(CustomizedDataClassJsonMixin):
     protocol: Optional[str] = None
     subject_name: Optional[str] = None
     issuer: Optional[str] = None
@@ -159,9 +144,8 @@ class SecurityDetails:
     valid_to: Optional[int] = None
 
 
-@dataclass_json(letter_case=camelcase)
 @dataclass
-class Entry:
+class Entry(CustomizedDataClassJsonMixin):
     started_date_time: datetime = field(
         metadata=config(
             encoder=datetime_encoder,
@@ -186,17 +170,15 @@ class Entry:
     )
 
 
-@dataclass_json(letter_case=camelcase)
 @dataclass
-class PageTimings:
+class PageTimings(CustomizedDataClassJsonMixin):
     on_content_load: Union[int, float, None] = None
     on_load: Union[int, float, None] = None
     comment: Optional[str] = None
 
 
-@dataclass_json(letter_case=camelcase)
 @dataclass
-class Page:
+class Page(CustomizedDataClassJsonMixin):
     started_date_time: datetime = field(metadata=config(encoder=datetime_encoder))
     id: str
     title: str
@@ -204,9 +186,8 @@ class Page:
     comment: Optional[str] = None
 
 
-@dataclass_json(letter_case=camelcase)
 @dataclass
-class Log:
+class Log(CustomizedDataClassJsonMixin):
     version: str
     creator: Creator
     browser: Browser
@@ -216,9 +197,5 @@ class Log:
 
 
 @dataclass
-class Har(DataClassJsonMixin):
-    log: Log = field(
-        metadata=config(
-            encoder=reject_none_encoder,
-        ),
-    )
+class Har(CustomizedDataClassJsonMixin):
+    log: Log
